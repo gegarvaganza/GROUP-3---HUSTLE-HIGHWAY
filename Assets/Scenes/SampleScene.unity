@@ -15034,6 +15034,7 @@ MonoBehaviour:
   SwipeLeft: 0
   SwipeRight: 0
   XValue: 3
+  SpeedDodge: 10
 --- !u!1 &685368587
 GameObject:
   m_ObjectHideFlags: 0
