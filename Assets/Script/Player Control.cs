@@ -13,7 +13,7 @@ public class PlayerControl : MonoBehaviour
     public SIDE m_SIDE = SIDE.Mid; 
     float NewXPos = 0f;
     [HideInInspector]
-    public bool SwipeLeft, SwipeRight, SwipeUp;
+    public bool SwipeLeft, SwipeRight, SwipeUp, SwipeDown;
     public float XValue;
     private CharacterController m_char;
     private Animator m_Animator;
@@ -21,13 +21,18 @@ public class PlayerControl : MonoBehaviour
     public float SpeedDodge;
     public float JumpPower = 7f;
     private float y;
-    public bool InJump;
-    public bool InRoll;
+    public bool inJump;
+    public bool inCrouch;
+    private float ColHeight;
+    private float ColCenterY;
     void Start()
     {
         m_char = GetComponent<CharacterController>();
-        transform.position = Vector3.zero;
+        ColHeight = m_char.height;
+        ColCenterY = m_char.center.y;
         m_Animator = GetComponent<Animator>();
+        transform.position = Vector3.zero;
+        
     }
 
     // Update is called once per frame
@@ -36,6 +41,7 @@ public class PlayerControl : MonoBehaviour
         SwipeLeft = Input.GetKeyDown (KeyCode.A) || Input.GetKeyDown(KeyCode.LeftArrow);
         SwipeRight = Input.GetKeyDown (KeyCode.D) || Input.GetKeyDown(KeyCode.RightArrow);
         SwipeUp = Input.GetKeyDown (KeyCode.W) || Input.GetKeyDown(KeyCode.UpArrow);
+        SwipeDown = Input.GetKeyDown (KeyCode.S) || Input.GetKeyDown(KeyCode.DownArrow);
 
         if (SwipeLeft)
         {
@@ -68,9 +74,10 @@ public class PlayerControl : MonoBehaviour
             }
         }
         Vector3 moveVector = new Vector3(x - transform.position.x, y * Time.deltaTime, 0);
-        x = Mathf.Lerp(x,NewXPos,Time.deltaTime * SpeedDodge);
+        x = Mathf.Lerp(x, NewXPos, Time.deltaTime * SpeedDodge);
         m_char.Move(moveVector);
         Jump();
+        Crouch();
     }
 
     public void Jump()
@@ -80,13 +87,13 @@ public class PlayerControl : MonoBehaviour
             if(m_Animator.GetCurrentAnimatorStateInfo(0).IsName("Falling"))
             {
                 m_Animator.Play("Landing");
-                InJump = false;
+                inJump = false;
             }
             if (SwipeUp)
             {
                 y = JumpPower;
                 m_Animator.CrossFadeInFixedTime("Jump", 0.1f);
-                InJump = true;
+                inJump = true;
             }
             else
             {
@@ -94,6 +101,28 @@ public class PlayerControl : MonoBehaviour
                 if(m_char.velocity.y<-0.1f)
                 m_Animator.Play("Falling");
             }
+        }
+    }
+    internal float CrouchCounter;
+    public void Crouch()
+    {
+        CrouchCounter -= Time.deltaTime;
+        if(CrouchCounter <= 0f)
+        {
+            CrouchCounter = 0f;
+            m_char.center = new Vector3(0, ColCenterY, 0);
+            m_char.height = ColHeight;
+            inCrouch = false;
+        }
+        if (SwipeDown)
+        {
+            CrouchCounter = 0.2f;
+            y -= 10f;
+            m_char.center = new Vector3(0, ColCenterY/2f, 0);
+            m_char.height = ColHeight/2f;
+            m_Animator.CrossFadeInFixedTime("Crouch", 0.1f);
+            inCrouch = true;
+            inJump = false;
         }
     }
 }
