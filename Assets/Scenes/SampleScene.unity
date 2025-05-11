@@ -15033,8 +15033,13 @@ MonoBehaviour:
   m_SIDE: 1
   SwipeLeft: 0
   SwipeRight: 0
+  SwipeUp: 0
+  SwipeDown: 0
   XValue: 3
   SpeedDodge: 10
+  JumpPower: 7
+  InJump: 0
+  InRoll: 0
 --- !u!1 &685368587
 GameObject:
   m_ObjectHideFlags: 0
