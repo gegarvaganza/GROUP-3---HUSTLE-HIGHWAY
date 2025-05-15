@@ -80,29 +80,39 @@ public class PlayerControl : MonoBehaviour
         Crouch();
     }
 
-    public void Jump()
+   public void Jump()
+{
+    if (m_char.isGrounded)
     {
-        if(m_char.isGrounded)
+        if (m_Animator.GetCurrentAnimatorStateInfo(0).IsName("Falling"))
         {
-            if(m_Animator.GetCurrentAnimatorStateInfo(0).IsName("Falling"))
-            {
-                m_Animator.Play("Landing");
-                inJump = false;
-            }
-            if (SwipeUp)
-            {
-                y = JumpPower;
-                m_Animator.CrossFadeInFixedTime("Jump", 0.1f);
-                inJump = true;
-            }
-            else
-            {
-                y -= JumpPower * 2 * Time.deltaTime;
-                if(m_char.velocity.y<-0.1f)
-                m_Animator.Play("Falling");
-            }
+            m_Animator.Play("Landing");
+            inJump = false;
+        }
+
+        if (SwipeUp)
+        {
+            y = JumpPower;
+            m_Animator.CrossFadeInFixedTime("Jump", 0.1f);
+            inJump = true;
+        }
+        else
+        {
+            y = -1f; // Slight downward force to keep grounded
         }
     }
+    else
+    {
+        y -= JumpPower * 2 * Time.deltaTime;
+
+        if (m_char.velocity.y < -0.1f && !inCrouch)
+        {
+            m_Animator.Play("Falling");
+        }
+    }
+}
+
+   
     internal float CrouchCounter;
     public void Crouch()
     {
