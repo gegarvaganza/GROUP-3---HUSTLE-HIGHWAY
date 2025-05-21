@@ -10,6 +10,7 @@ TagManager:
   - Obstacle
   - DashPowerup
   - Wall
+  - Trigger
   layers:
   - Default
   - TransparentFX
