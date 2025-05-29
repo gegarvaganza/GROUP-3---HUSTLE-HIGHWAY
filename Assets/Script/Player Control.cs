@@ -1,10 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
-using System.Xml.Schema;
-using Unity.Collections;
-using Unity.VisualScripting;
 using UnityEngine;
-
 
 [System.Serializable]
 public enum SIDE { Left, Mid, Right }
@@ -27,6 +23,20 @@ public class PlayerControl : MonoBehaviour
     private float ColHeight;
     private float ColCenterY;
 
+    // === Jetpack Variables ===
+    private bool jetpackEquip = false;
+    public float mThrust = 30f;               // Jetpack thrust strength
+    public GameObject jetpack;                // Jetpack visual object
+    public float jetpackDuration = 5f;        // Duration in seconds
+    private float jetpackTimer = 0f;          // Timer countdown
+    // ==========================
+
+    // === Explosion Powerup Variables ===
+    private bool explosionPowerupEquip = false;
+    public float explosionPowerupDuration = 5f;  // Explosion powerup duration in seconds
+    private float explosionPowerupTimer = 0f;    // Timer countdown
+    // ====================================
+
     // === Added for road section instantiation ===
     public GameObject roadSection;
     // ============================================
@@ -38,6 +48,10 @@ public class PlayerControl : MonoBehaviour
         ColCenterY = m_char.center.y;
         m_Animator = GetComponent<Animator>();
         transform.position = Vector3.zero;
+
+        // === Jetpack Init ===
+        jetpack.SetActive(false);
+        // ====================
     }
 
     void Update()
@@ -78,6 +92,48 @@ public class PlayerControl : MonoBehaviour
             }
         }
 
+        // === Jetpack Thrust ===
+        if (jetpackEquip && Input.GetButton("Fire1"))
+        {
+            y += mThrust * Time.deltaTime;
+            if (y > JumpPower * 2f)
+                y = JumpPower * 2f;
+        }
+        // ======================
+
+        // === Jetpack Timer Countdown ===
+        if (jetpackEquip)
+        {
+            jetpackTimer -= Time.deltaTime;
+
+            if (jetpackTimer <= 0f)
+            {
+                jetpackEquip = false;
+                jetpack.SetActive(false);
+                jetpackTimer = 0f;
+            }
+        }
+        // ===============================
+
+        // === Explosion Powerup Timer Countdown ===
+        if (explosionPowerupEquip)
+        {
+            explosionPowerupTimer -= Time.deltaTime;
+            if (explosionPowerupTimer <= 0f)
+            {
+                explosionPowerupEquip = false;
+                explosionPowerupTimer = 0f;
+                Debug.Log("Explosion powerup expired");
+            }
+
+            // Use mouse click (left button) to activate explosion effect
+            if (Input.GetMouseButtonDown(0)) // 0 = left mouse button
+            {
+                ExplodeNearbyObstacles();
+            }
+        }
+        // ==========================================
+
         Vector3 moveVector = new Vector3(x - transform.position.x, y * Time.deltaTime, 0);
         x = Mathf.Lerp(x, NewXPos, Time.deltaTime * SpeedDodge);
         m_char.Move(moveVector);
@@ -104,7 +160,7 @@ public class PlayerControl : MonoBehaviour
             }
             else
             {
-                y = -1f; // Slight downward force to keep grounded
+                y = -1f;
             }
         }
         else
@@ -142,13 +198,55 @@ public class PlayerControl : MonoBehaviour
         }
     }
 
-    // === New method from image script ===
     private void OnTriggerEnter(Collider other)
     {
         if (other.gameObject.CompareTag("Trigger"))
         {
-            Instantiate(roadSection, new Vector3(-202,-59,162), Quaternion.identity);
+            Instantiate(roadSection, new Vector3(-202, -59, 162), Quaternion.identity);
         }
+
+        // === Jetpack Powerup Pickup ===
+        if (other.CompareTag("Powerup")) // Tag this to your jetpack powerup object
+        {
+            jetpackEquip = true;
+            jetpack.SetActive(true);
+            jetpackTimer = jetpackDuration;
+            Destroy(other.gameObject);
+        }
+        // ===============================
+
+        // === Explosion Powerup Pickup ===
+        else if (other.CompareTag("ExplosionPowerup"))
+        {
+            explosionPowerupEquip = true;
+            explosionPowerupTimer = explosionPowerupDuration;
+            Destroy(other.gameObject);
+        }
+        // ===============================
+
+        // Removed explosion effect on obstacle collision, now handled on mouse click
     }
-    // ====================================
+
+    void ExplodeNearbyObstacles()
+    {
+        float explosionForce = 650f;
+        float explosionRadius = 15.5f;
+        float upwardsModifier = 1.5f;
+
+        // Find all colliders within explosion radius
+        Collider[] hitColliders = Physics.OverlapSphere(transform.position, explosionRadius);
+        foreach (var hitCollider in hitColliders)
+        {
+            if (hitCollider.CompareTag("Obstacle"))
+            {
+                Rigidbody rb = hitCollider.GetComponent<Rigidbody>();
+                if (rb != null)
+                {
+                    rb.AddExplosionForce(explosionForce, transform.position, explosionRadius, upwardsModifier, ForceMode.Impulse);
+                }
+            }
+        }
+
+        Debug.Log("Explosion powerup activated!");
+    }
 }
