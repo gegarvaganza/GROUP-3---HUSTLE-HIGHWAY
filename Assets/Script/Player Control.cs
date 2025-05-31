@@ -1,3 +1,4 @@
+
 using UnityEngine;
 using System.Collections;
 
@@ -15,6 +16,7 @@ public class PlayerControl : MonoBehaviour
     private Animator m_Animator;
     private float x;
     public float SpeedDodge;
+    public float forwardSpeed = 10f;
     public float JumpPower = 7f;
     private float y;
     public bool inJump;
@@ -122,12 +124,12 @@ public class PlayerControl : MonoBehaviour
             }
         }
 
-        // Movement calculations (Z-axis movement removed!)
+        // Movement calculations
         x = Mathf.Lerp(x, NewXPos, Time.deltaTime * SpeedDodge);
         Vector3 moveVector = new Vector3(
             x - transform.position.x,
             y * Time.deltaTime,
-            0f // No forward (Z) movement
+            forwardSpeed * Time.deltaTime
         );
         m_char.Move(moveVector);
 
@@ -205,8 +207,11 @@ public class PlayerControl : MonoBehaviour
                 Rigidbody rb = hitCollider.GetComponent<Rigidbody>();
                 if (rb != null)
                 {
+                    // Temporarily disable kinematic to allow explosion force
                     rb.isKinematic = false;
                     rb.AddExplosionForce(explosionForce, transform.position, explosionRadius, upwardsModifier, ForceMode.Impulse);
+
+                    // Re-enable kinematic after a short delay
                     StartCoroutine(ReEnableKinematic(rb, 0.5f));
                 }
             }
@@ -225,12 +230,13 @@ public class PlayerControl : MonoBehaviour
 
     private void OnControllerColliderHit(ControllerColliderHit hit)
     {
+        // Prevent player from pushing obstacles
         if (hit.gameObject.CompareTag("Obstacle"))
         {
             Rigidbody obstacleRb = hit.collider.GetComponent<Rigidbody>();
             if (obstacleRb != null && obstacleRb.isKinematic == false)
             {
-                obstacleRb.isKinematic = true;
+                obstacleRb.isKinematic = true; // Force-disable physics
             }
         }
     }
