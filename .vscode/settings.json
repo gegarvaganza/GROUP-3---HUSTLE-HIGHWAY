@@ -56,5 +56,5 @@
         "temp/": true,
         "Temp/": true
     },
-    "dotnet.defaultSolution": "GROUP 3 - HUSTLE HIGHWAY.sln"
+    "dotnet.defaultSolution": "GROUP-3---HUSTLE-HIGHWAY.sln"
 }

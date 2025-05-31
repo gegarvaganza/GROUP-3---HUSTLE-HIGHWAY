@@ -34,9 +34,6 @@ public class PlayerControl : MonoBehaviour
     public float explosionPowerupDuration = 5f;
     private float explosionPowerupTimer = 0f;
 
-    // Road section instantiation
-    public GameObject roadSection;
-
     void Start()
     {
         m_char = GetComponent<CharacterController>();
@@ -237,11 +234,6 @@ public class PlayerControl : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        if (other.gameObject.CompareTag("Trigger"))
-        {
-            Instantiate(roadSection, new Vector3(-201, transform.position.y, 375), Quaternion.identity);
-        }
-
         if (other.CompareTag("Powerup"))
         {
             jetpackEquip = true;
