@@ -1,6 +1,5 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
+using System.Collections;
 
 [System.Serializable]
 public enum SIDE { Left, Mid, Right }
@@ -16,6 +15,7 @@ public class PlayerControl : MonoBehaviour
     private Animator m_Animator;
     private float x;
     public float SpeedDodge;
+    public float forwardSpeed = 10f;
     public float JumpPower = 7f;
     private float y;
     public bool inJump;
@@ -23,23 +23,20 @@ public class PlayerControl : MonoBehaviour
     private float ColHeight;
     private float ColCenterY;
 
-    // === Jetpack Variables ===
+    // Jetpack variables
     private bool jetpackEquip = false;
-    public float mThrust = 30f;               // Jetpack thrust strength
-    public GameObject jetpack;                // Jetpack visual object
-    public float jetpackDuration = 5f;        // Duration in seconds
-    private float jetpackTimer = 0f;          // Timer countdown
-    // ==========================
+    public float mThrust = 30f;
+    public GameObject jetpack;
+    public float jetpackDuration = 5f;
+    private float jetpackTimer = 0f;
 
-    // === Explosion Powerup Variables ===
+    // Explosion powerup variables
     private bool explosionPowerupEquip = false;
-    public float explosionPowerupDuration = 5f;  // Explosion powerup duration in seconds
-    private float explosionPowerupTimer = 0f;    // Timer countdown
-    // ====================================
+    public float explosionPowerupDuration = 5f;
+    private float explosionPowerupTimer = 0f;
 
-    // === Added for road section instantiation ===
+    // Road section instantiation
     public GameObject roadSection;
-    // ============================================
 
     void Start()
     {
@@ -48,19 +45,18 @@ public class PlayerControl : MonoBehaviour
         ColCenterY = m_char.center.y;
         m_Animator = GetComponent<Animator>();
         transform.position = Vector3.zero;
-
-        // === Jetpack Init ===
         jetpack.SetActive(false);
-        // ====================
     }
 
     void Update()
     {
+        // Input detection
         SwipeLeft = Input.GetKeyDown(KeyCode.A) || Input.GetKeyDown(KeyCode.LeftArrow);
         SwipeRight = Input.GetKeyDown(KeyCode.D) || Input.GetKeyDown(KeyCode.RightArrow);
         SwipeUp = Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.UpArrow);
         SwipeDown = Input.GetKeyDown(KeyCode.S) || Input.GetKeyDown(KeyCode.DownArrow);
 
+        // Side movement logic
         if (SwipeLeft)
         {
             if (m_SIDE == SIDE.Mid)
@@ -92,20 +88,18 @@ public class PlayerControl : MonoBehaviour
             }
         }
 
-        // === Jetpack Thrust ===
+        // Jetpack controls
         if (jetpackEquip && Input.GetButton("Fire1"))
         {
             y += mThrust * Time.deltaTime;
             if (y > JumpPower * 2f)
                 y = JumpPower * 2f;
         }
-        // ======================
 
-        // === Jetpack Timer Countdown ===
+        // Timers for powerups
         if (jetpackEquip)
         {
             jetpackTimer -= Time.deltaTime;
-
             if (jetpackTimer <= 0f)
             {
                 jetpackEquip = false;
@@ -113,9 +107,7 @@ public class PlayerControl : MonoBehaviour
                 jetpackTimer = 0f;
             }
         }
-        // ===============================
 
-        // === Explosion Powerup Timer Countdown ===
         if (explosionPowerupEquip)
         {
             explosionPowerupTimer -= Time.deltaTime;
@@ -123,19 +115,21 @@ public class PlayerControl : MonoBehaviour
             {
                 explosionPowerupEquip = false;
                 explosionPowerupTimer = 0f;
-                Debug.Log("Explosion powerup expired");
             }
 
-            // Use mouse click (left button) to activate explosion effect
-            if (Input.GetMouseButtonDown(0)) // 0 = left mouse button
+            if (Input.GetMouseButtonDown(0))
             {
                 ExplodeNearbyObstacles();
             }
         }
-        // ==========================================
 
-        Vector3 moveVector = new Vector3(x - transform.position.x, y * Time.deltaTime, 0);
+        // Movement calculations
         x = Mathf.Lerp(x, NewXPos, Time.deltaTime * SpeedDodge);
+        Vector3 moveVector = new Vector3(
+            x - transform.position.x,
+            y * Time.deltaTime,
+            forwardSpeed * Time.deltaTime
+        );
         m_char.Move(moveVector);
 
         Jump();
@@ -198,42 +192,12 @@ public class PlayerControl : MonoBehaviour
         }
     }
 
-    private void OnTriggerEnter(Collider other)
-    {
-        if (other.gameObject.CompareTag("Trigger"))
-        {
-            Instantiate(roadSection, new Vector3(-202, -59, 162), Quaternion.identity);
-        }
-
-        // === Jetpack Powerup Pickup ===
-        if (other.CompareTag("Powerup")) // Tag this to your jetpack powerup object
-        {
-            jetpackEquip = true;
-            jetpack.SetActive(true);
-            jetpackTimer = jetpackDuration;
-            Destroy(other.gameObject);
-        }
-        // ===============================
-
-        // === Explosion Powerup Pickup ===
-        else if (other.CompareTag("ExplosionPowerup"))
-        {
-            explosionPowerupEquip = true;
-            explosionPowerupTimer = explosionPowerupDuration;
-            Destroy(other.gameObject);
-        }
-        // ===============================
-
-        // Removed explosion effect on obstacle collision, now handled on mouse click
-    }
-
     void ExplodeNearbyObstacles()
     {
         float explosionForce = 650f;
         float explosionRadius = 15.5f;
         float upwardsModifier = 1.5f;
 
-        // Find all colliders within explosion radius
         Collider[] hitColliders = Physics.OverlapSphere(transform.position, explosionRadius);
         foreach (var hitCollider in hitColliders)
         {
@@ -242,11 +206,59 @@ public class PlayerControl : MonoBehaviour
                 Rigidbody rb = hitCollider.GetComponent<Rigidbody>();
                 if (rb != null)
                 {
+                    // Temporarily disable kinematic to allow explosion force
+                    rb.isKinematic = false;
                     rb.AddExplosionForce(explosionForce, transform.position, explosionRadius, upwardsModifier, ForceMode.Impulse);
+
+                    // Re-enable kinematic after a short delay
+                    StartCoroutine(ReEnableKinematic(rb, 0.5f));
                 }
             }
         }
-
         Debug.Log("Explosion powerup activated!");
+    }
+
+    IEnumerator ReEnableKinematic(Rigidbody rb, float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        if (rb != null)
+        {
+            rb.isKinematic = true;
+        }
+    }
+
+    private void OnControllerColliderHit(ControllerColliderHit hit)
+    {
+        // Prevent player from pushing obstacles
+        if (hit.gameObject.CompareTag("Obstacle"))
+        {
+            Rigidbody obstacleRb = hit.collider.GetComponent<Rigidbody>();
+            if (obstacleRb != null && obstacleRb.isKinematic == false)
+            {
+                obstacleRb.isKinematic = true; // Force-disable physics
+            }
+        }
+    }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        if (other.gameObject.CompareTag("Trigger"))
+        {
+            Instantiate(roadSection, new Vector3(-202, -59, 162), Quaternion.identity);
+        }
+
+        if (other.CompareTag("Powerup"))
+        {
+            jetpackEquip = true;
+            jetpack.SetActive(true);
+            jetpackTimer = jetpackDuration;
+            Destroy(other.gameObject);
+        }
+        else if (other.CompareTag("ExplosionPowerup"))
+        {
+            explosionPowerupEquip = true;
+            explosionPowerupTimer = explosionPowerupDuration;
+            Destroy(other.gameObject);
+        }
     }
 }
