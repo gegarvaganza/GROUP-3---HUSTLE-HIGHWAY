@@ -1,12 +1,12 @@
 using UnityEngine;
 
-public class RoadTrigger : MonoBehaviour
+public class Trigger : MonoBehaviour
 {
     [Header("Spawn Position Settings")]
     [SerializeField] private GameObject roadPrefab;
-    [SerializeField] private float spawnZOffset = 100f;  // Distance ahead to spawn
-    [SerializeField] private float spawnXPosition = -59f; // Adjustable X-axis position
-    [SerializeField] private float spawnYPosition = 0f;   // Adjustable Y-axis (height)
+    [SerializeField] private float spawnZOffset = 100f;
+    [SerializeField] private float spawnXPosition = -59f;
+    [SerializeField] private float spawnYPosition = 0f;
 
     private bool _hasSpawned = false;
 
@@ -24,12 +24,18 @@ public class RoadTrigger : MonoBehaviour
         if (roadPrefab != null)
         {
             Vector3 spawnPos = new Vector3(
-                spawnXPosition,  // Use custom X position
-                spawnYPosition,  // Use custom Y position
-                transform.position.z + spawnZOffset  // Spawn ahead of current road
+                spawnXPosition,
+                spawnYPosition,
+                transform.position.z + spawnZOffset
             );
-            
-            Instantiate(roadPrefab, spawnPos, Quaternion.identity);
+
+            GameObject newRoad = Instantiate(roadPrefab, spawnPos, Quaternion.identity);
+
+            // Ensure it has a Move script
+            if (!newRoad.GetComponent<RoadMover>())
+            {
+                newRoad.AddComponent<RoadMover>();
+            }
         }
         else
         {
@@ -37,7 +43,6 @@ public class RoadTrigger : MonoBehaviour
         }
     }
 
-    // Visualize spawn position in Scene view (for debugging)
     private void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.green;
