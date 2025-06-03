@@ -11,6 +11,7 @@ TagManager:
   - DashPowerup
   - Wall
   - Trigger
+  - InvincibilityPowerup
   layers:
   - Default
   - TransparentFX

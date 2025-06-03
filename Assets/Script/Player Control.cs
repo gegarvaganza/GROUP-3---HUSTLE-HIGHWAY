@@ -34,6 +34,15 @@ public class PlayerControl : MonoBehaviour
     public float explosionPowerupDuration = 5f;
     private float explosionPowerupTimer = 0f;
 
+    // Invincibility variables
+    private bool hasInvincibilityPowerup = false;
+    private bool isInvincible = false;
+    public float invincibilityDuration = 5f;
+    private float invincibilityTimer = 0f;
+
+    private Renderer playerRenderer;
+    private Collider playerCollider;
+
     void Start()
     {
         m_char = GetComponent<CharacterController>();
@@ -42,6 +51,14 @@ public class PlayerControl : MonoBehaviour
         m_Animator = GetComponent<Animator>();
         transform.position = Vector3.zero;
         jetpack.SetActive(false);
+
+        playerRenderer = GetComponent<Renderer>();
+        if (playerRenderer == null)
+            Debug.LogWarning("Player Renderer not found! Invincibility color effect won't work.");
+
+        playerCollider = GetComponent<Collider>();
+        if (playerCollider == null)
+            Debug.LogWarning("Player Collider not found!");
     }
 
     void Update()
@@ -119,6 +136,34 @@ public class PlayerControl : MonoBehaviour
             }
         }
 
+        // --- INVINCIBILITY ACTIVATION ---
+
+        // Reduce timer if powerup available
+        if (hasInvincibilityPowerup)
+        {
+            invincibilityTimer -= Time.deltaTime;
+            if (invincibilityTimer <= 0f)
+            {
+                // Powerup expired
+                hasInvincibilityPowerup = false;
+                DeactivateInvincibility();
+            }
+            else
+            {
+                // While holding F activate invincibility
+                if (Input.GetKey(KeyCode.F))
+                {
+                    if (!isInvincible)
+                        ActivateInvincibility();
+                }
+                else
+                {
+                    if (isInvincible)
+                        DeactivateInvincibility();
+                }
+            }
+        }
+
         // Movement calculations (Z-axis movement removed!)
         x = Mathf.Lerp(x, NewXPos, Time.deltaTime * SpeedDodge);
         Vector3 moveVector = new Vector3(
@@ -130,6 +175,43 @@ public class PlayerControl : MonoBehaviour
 
         Jump();
         Crouch();
+    }
+
+    private void ActivateInvincibility()
+    {
+        isInvincible = true;
+        invincibilityTimer = Mathf.Max(invincibilityTimer, invincibilityDuration); // Reset timer if needed
+        hasInvincibilityPowerup = true;
+
+        if (playerRenderer != null)
+            playerRenderer.material.color = Color.yellow;
+
+        SetCollisionWithObstacles(false); // Disable collision with obstacles
+
+        Debug.Log("Invincibility Activated");
+    }
+
+    private void DeactivateInvincibility()
+    {
+        isInvincible = false;
+        if (playerRenderer != null)
+            playerRenderer.material.color = Color.white;
+
+        SetCollisionWithObstacles(true); // Re-enable collisions
+
+        Debug.Log("Invincibility Deactivated");
+    }
+
+    void SetCollisionWithObstacles(bool enabled)
+    {
+        Collider[] allColliders = Object.FindObjectsByType<Collider>(FindObjectsSortMode.None);
+        foreach (var col in allColliders)
+        {
+            if (col.CompareTag("Obstacle") && playerCollider != null)
+            {
+                Physics.IgnoreCollision(playerCollider, col, !enabled);
+            }
+        }
     }
 
     public void Jump()
@@ -245,6 +327,13 @@ public class PlayerControl : MonoBehaviour
         {
             explosionPowerupEquip = true;
             explosionPowerupTimer = explosionPowerupDuration;
+            Destroy(other.gameObject);
+        }
+        else if (other.CompareTag("InvincibilityPowerup"))
+        {
+            hasInvincibilityPowerup = true;
+            invincibilityTimer = invincibilityDuration;
+            Debug.Log("Invincibility powerup picked up! Hold F to activate.");
             Destroy(other.gameObject);
         }
     }
