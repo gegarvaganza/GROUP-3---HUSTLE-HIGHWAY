@@ -12,6 +12,7 @@ TagManager:
   - Wall
   - Trigger
   - InvincibilityPowerup
+  - WallExplosionPowerup
   layers:
   - Default
   - TransparentFX
