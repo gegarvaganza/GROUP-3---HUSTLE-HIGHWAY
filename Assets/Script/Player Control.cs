@@ -29,16 +29,16 @@ public class PlayerControl : MonoBehaviour
     public float jetpackDuration = 5f;
     private float jetpackTimer = 0f;
 
-    // Explosion powerup variables
+    // Explosion powerup (manual trigger)
     private bool explosionPowerupEquip = false;
     public float explosionPowerupDuration = 5f;
     private float explosionPowerupTimer = 0f;
 
-    // Invincibility variables
-    private bool hasInvincibilityPowerup = false;
-    private bool isInvincible = false;
-    public float invincibilityDuration = 5f;
-    private float invincibilityTimer = 0f;
+    // Wall-hit explosion powerup (manual trigger)
+    private bool wallExplosionPowerupEquip = false;
+    public float wallExplosionPowerupDuration = 5f;
+    private float wallExplosionPowerupTimer = 0f;
+    private bool wallExplosionReady = false;
 
     private Renderer playerRenderer;
     private Collider playerCollider;
@@ -54,7 +54,7 @@ public class PlayerControl : MonoBehaviour
 
         playerRenderer = GetComponent<Renderer>();
         if (playerRenderer == null)
-            Debug.LogWarning("Player Renderer not found! Invincibility color effect won't work.");
+            Debug.LogWarning("Player Renderer not found! Effects may not show.");
 
         playerCollider = GetComponent<Collider>();
         if (playerCollider == null)
@@ -63,13 +63,11 @@ public class PlayerControl : MonoBehaviour
 
     void Update()
     {
-        // Input detection
         SwipeLeft = Input.GetKeyDown(KeyCode.A) || Input.GetKeyDown(KeyCode.LeftArrow);
         SwipeRight = Input.GetKeyDown(KeyCode.D) || Input.GetKeyDown(KeyCode.RightArrow);
         SwipeUp = Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.UpArrow);
         SwipeDown = Input.GetKeyDown(KeyCode.S) || Input.GetKeyDown(KeyCode.DownArrow);
 
-        // Side movement logic
         if (SwipeLeft)
         {
             if (m_SIDE == SIDE.Mid)
@@ -101,7 +99,6 @@ public class PlayerControl : MonoBehaviour
             }
         }
 
-        // Jetpack controls
         if (jetpackEquip && Input.GetButton("Fire1"))
         {
             y += mThrust * Time.deltaTime;
@@ -109,7 +106,6 @@ public class PlayerControl : MonoBehaviour
                 y = JumpPower * 2f;
         }
 
-        // Timers for powerups
         if (jetpackEquip)
         {
             jetpackTimer -= Time.deltaTime;
@@ -117,7 +113,6 @@ public class PlayerControl : MonoBehaviour
             {
                 jetpackEquip = false;
                 jetpack.SetActive(false);
-                jetpackTimer = 0f;
             }
         }
 
@@ -127,91 +122,36 @@ public class PlayerControl : MonoBehaviour
             if (explosionPowerupTimer <= 0f)
             {
                 explosionPowerupEquip = false;
-                explosionPowerupTimer = 0f;
             }
-
             if (Input.GetMouseButtonDown(0))
             {
                 ExplodeNearbyObstacles();
             }
         }
 
-        // --- INVINCIBILITY ACTIVATION ---
-
-        // Reduce timer if powerup available
-        if (hasInvincibilityPowerup)
+        if (wallExplosionPowerupEquip)
         {
-            invincibilityTimer -= Time.deltaTime;
-            if (invincibilityTimer <= 0f)
+            wallExplosionPowerupTimer -= Time.deltaTime;
+            if (wallExplosionPowerupTimer <= 0f)
             {
-                // Powerup expired
-                hasInvincibilityPowerup = false;
-                DeactivateInvincibility();
+                wallExplosionPowerupEquip = false;
             }
-            else
+            if (Input.GetKeyDown(KeyCode.F))
             {
-                // While holding F activate invincibility
-                if (Input.GetKey(KeyCode.F))
-                {
-                    if (!isInvincible)
-                        ActivateInvincibility();
-                }
-                else
-                {
-                    if (isInvincible)
-                        DeactivateInvincibility();
-                }
+                ExplodeNearbyWalls();
             }
         }
 
-        // Movement calculations (Z-axis movement removed!)
         x = Mathf.Lerp(x, NewXPos, Time.deltaTime * SpeedDodge);
         Vector3 moveVector = new Vector3(
             x - transform.position.x,
             y * Time.deltaTime,
-            0f // No forward (Z) movement
+            0f
         );
         m_char.Move(moveVector);
 
         Jump();
         Crouch();
-    }
-
-    private void ActivateInvincibility()
-    {
-        isInvincible = true;
-        invincibilityTimer = Mathf.Max(invincibilityTimer, invincibilityDuration); // Reset timer if needed
-        hasInvincibilityPowerup = true;
-
-        if (playerRenderer != null)
-            playerRenderer.material.color = Color.yellow;
-
-        SetCollisionWithObstacles(false); // Disable collision with obstacles
-
-        Debug.Log("Invincibility Activated");
-    }
-
-    private void DeactivateInvincibility()
-    {
-        isInvincible = false;
-        if (playerRenderer != null)
-            playerRenderer.material.color = Color.white;
-
-        SetCollisionWithObstacles(true); // Re-enable collisions
-
-        Debug.Log("Invincibility Deactivated");
-    }
-
-    void SetCollisionWithObstacles(bool enabled)
-    {
-        Collider[] allColliders = Object.FindObjectsByType<Collider>(FindObjectsSortMode.None);
-        foreach (var col in allColliders)
-        {
-            if (col.CompareTag("Obstacle") && playerCollider != null)
-            {
-                Physics.IgnoreCollision(playerCollider, col, !enabled);
-            }
-        }
     }
 
     public void Jump()
@@ -223,7 +163,6 @@ public class PlayerControl : MonoBehaviour
                 m_Animator.Play("Landing");
                 inJump = false;
             }
-
             if (SwipeUp)
             {
                 y = JumpPower;
@@ -238,7 +177,6 @@ public class PlayerControl : MonoBehaviour
         else
         {
             y -= JumpPower * 2 * Time.deltaTime;
-
             if (m_char.velocity.y < -0.1f && !inCrouch)
             {
                 m_Animator.Play("Falling");
@@ -290,7 +228,7 @@ public class PlayerControl : MonoBehaviour
                 }
             }
         }
-        Debug.Log("Explosion powerup activated!");
+        Debug.Log("Manual explosion activated!");
     }
 
     IEnumerator ReEnableKinematic(Rigidbody rb, float delay)
@@ -304,14 +242,42 @@ public class PlayerControl : MonoBehaviour
 
     private void OnControllerColliderHit(ControllerColliderHit hit)
     {
-        if (hit.gameObject.CompareTag("Obstacle"))
+        if (wallExplosionPowerupEquip && wallExplosionReady && hit.gameObject.CompareTag("Wall"))
         {
-            Rigidbody obstacleRb = hit.collider.GetComponent<Rigidbody>();
-            if (obstacleRb != null && obstacleRb.isKinematic == false)
+            Rigidbody rb = hit.collider.GetComponent<Rigidbody>();
+            if (rb != null)
             {
-                obstacleRb.isKinematic = true;
+                rb.isKinematic = false;
+                rb.AddExplosionForce(700f, hit.point, 10f, 3f, ForceMode.Impulse);
+                StartCoroutine(ReEnableKinematic(rb, 0.5f));
+                Debug.Log("Wall exploded by powerup!");
+                wallExplosionReady = false;
             }
         }
+    }
+
+    void ExplodeNearbyWalls()
+    {
+        float explosionForce = 70f;
+        float explosionRadius = 5f;
+        float upwardsModifier = 0.2f;
+
+        Collider[] hitColliders = Physics.OverlapSphere(transform.position, explosionRadius);
+        foreach (var hitCollider in hitColliders)
+        {
+            if (hitCollider.CompareTag("Wall"))
+            {
+                Rigidbody rb = hitCollider.GetComponent<Rigidbody>();
+                if (rb != null)
+                {
+                    rb.isKinematic = false;
+                    rb.AddExplosionForce(explosionForce, transform.position, explosionRadius, upwardsModifier, ForceMode.Impulse);
+                    StartCoroutine(ReEnableKinematic(rb, 0.5f));
+                }
+            }
+        }
+
+        Debug.Log("Wall explosion powerup used!");
     }
 
     private void OnTriggerEnter(Collider other)
@@ -329,12 +295,12 @@ public class PlayerControl : MonoBehaviour
             explosionPowerupTimer = explosionPowerupDuration;
             Destroy(other.gameObject);
         }
-        else if (other.CompareTag("InvincibilityPowerup"))
+        else if (other.CompareTag("WallExplosionPowerup"))
         {
-            hasInvincibilityPowerup = true;
-            invincibilityTimer = invincibilityDuration;
-            Debug.Log("Invincibility powerup picked up! Hold F to activate.");
+            wallExplosionPowerupEquip = true;
+            wallExplosionPowerupTimer = wallExplosionPowerupDuration;
             Destroy(other.gameObject);
+            Debug.Log("Wall explosion powerup picked up!");
         }
     }
 }
