@@ -113,6 +113,9 @@ public class PlayerControl : MonoBehaviour
             {
                 jetpackEquip = false;
                 jetpack.SetActive(false);
+
+                var ui = FindObjectOfType<PowerupUI>();
+                ui?.RemoveJetpack();
             }
         }
 
@@ -126,6 +129,10 @@ public class PlayerControl : MonoBehaviour
             if (Input.GetMouseButtonDown(0))
             {
                 ExplodeNearbyObstacles();
+                explosionPowerupEquip = false;
+
+                var ui = FindObjectOfType<PowerupUI>();
+                ui?.RemoveExplosion();
             }
         }
 
@@ -139,6 +146,10 @@ public class PlayerControl : MonoBehaviour
             if (Input.GetKeyDown(KeyCode.F))
             {
                 ExplodeNearbyWalls();
+                wallExplosionPowerupEquip = false;
+
+                var ui = FindObjectOfType<PowerupUI>();
+                ui?.RemoveWallExplosion();
             }
         }
 
@@ -282,25 +293,33 @@ public class PlayerControl : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
+        var powerupUI = FindObjectOfType<PowerupUI>();
+
         if (other.CompareTag("Powerup"))
         {
             jetpackEquip = true;
             jetpack.SetActive(true);
             jetpackTimer = jetpackDuration;
             Destroy(other.gameObject);
+
+            powerupUI?.AddJetpack();
         }
         else if (other.CompareTag("ExplosionPowerup"))
         {
             explosionPowerupEquip = true;
             explosionPowerupTimer = explosionPowerupDuration;
             Destroy(other.gameObject);
+
+            powerupUI?.AddExplosion();
         }
         else if (other.CompareTag("WallExplosionPowerup"))
         {
             wallExplosionPowerupEquip = true;
             wallExplosionPowerupTimer = wallExplosionPowerupDuration;
             Destroy(other.gameObject);
+
             Debug.Log("Wall explosion powerup picked up!");
+            powerupUI?.AddWallExplosion();
         }
     }
-}
+} 
