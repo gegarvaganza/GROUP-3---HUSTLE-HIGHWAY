@@ -1,5 +1,6 @@
-using UnityEngine;
+using UnityEngine; 
 using System.Collections;
+using UnityEngine.UI;
 
 [System.Serializable]
 public enum SIDE { Left, Mid, Right }
@@ -43,6 +44,14 @@ public class PlayerControl : MonoBehaviour
     private Renderer playerRenderer;
     private Collider playerCollider;
 
+    // Health system
+    private float playerHealth = 100f;
+    private float maxHealth = 100f;
+    public Image healthBar;
+
+    //ColliderCheck
+    private float hitCooldown = 0f;
+
     void Start()
     {
         m_char = GetComponent<CharacterController>();
@@ -59,6 +68,8 @@ public class PlayerControl : MonoBehaviour
         playerCollider = GetComponent<Collider>();
         if (playerCollider == null)
             Debug.LogWarning("Player Collider not found!");
+
+        UpdateHealthUI();
     }
 
     void Update()
@@ -113,9 +124,6 @@ public class PlayerControl : MonoBehaviour
             {
                 jetpackEquip = false;
                 jetpack.SetActive(false);
-
-                var ui = FindObjectOfType<PowerupUI>();
-                ui?.RemoveJetpack();
             }
         }
 
@@ -129,10 +137,6 @@ public class PlayerControl : MonoBehaviour
             if (Input.GetMouseButtonDown(0))
             {
                 ExplodeNearbyObstacles();
-                explosionPowerupEquip = false;
-
-                var ui = FindObjectOfType<PowerupUI>();
-                ui?.RemoveExplosion();
             }
         }
 
@@ -146,12 +150,11 @@ public class PlayerControl : MonoBehaviour
             if (Input.GetKeyDown(KeyCode.F))
             {
                 ExplodeNearbyWalls();
-                wallExplosionPowerupEquip = false;
-
-                var ui = FindObjectOfType<PowerupUI>();
-                ui?.RemoveWallExplosion();
             }
         }
+
+        if (hitCooldown > 0f)
+            hitCooldown -= Time.deltaTime;
 
         x = Mathf.Lerp(x, NewXPos, Time.deltaTime * SpeedDodge);
         Vector3 moveVector = new Vector3(
@@ -253,17 +256,17 @@ public class PlayerControl : MonoBehaviour
 
     private void OnControllerColliderHit(ControllerColliderHit hit)
     {
+        if (hitCooldown > 0f) return;
+
         if (wallExplosionPowerupEquip && wallExplosionReady && hit.gameObject.CompareTag("Wall"))
         {
-            Rigidbody rb = hit.collider.GetComponent<Rigidbody>();
-            if (rb != null)
-            {
-                rb.isKinematic = false;
-                rb.AddExplosionForce(700f, hit.point, 10f, 3f, ForceMode.Impulse);
-                StartCoroutine(ReEnableKinematic(rb, 0.5f));
-                Debug.Log("Wall exploded by powerup!");
-                wallExplosionReady = false;
-            }
+            // wall explosion logic
+        }
+
+        if (hit.gameObject.CompareTag("ObstacleTrigger"))
+        {
+            ReduceHealthByPercentage(0.3f); // 30% damage
+            hitCooldown = 0.5f; // Half-second cooldown
         }
     }
 
@@ -293,33 +296,53 @@ public class PlayerControl : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        var powerupUI = FindObjectOfType<PowerupUI>();
-
         if (other.CompareTag("Powerup"))
         {
             jetpackEquip = true;
             jetpack.SetActive(true);
             jetpackTimer = jetpackDuration;
             Destroy(other.gameObject);
-
-            powerupUI?.AddJetpack();
         }
         else if (other.CompareTag("ExplosionPowerup"))
         {
             explosionPowerupEquip = true;
             explosionPowerupTimer = explosionPowerupDuration;
             Destroy(other.gameObject);
-
-            powerupUI?.AddExplosion();
         }
         else if (other.CompareTag("WallExplosionPowerup"))
         {
             wallExplosionPowerupEquip = true;
             wallExplosionPowerupTimer = wallExplosionPowerupDuration;
             Destroy(other.gameObject);
-
             Debug.Log("Wall explosion powerup picked up!");
-            powerupUI?.AddWallExplosion();
         }
     }
-} 
+
+    public void ReduceHealthByPercentage(float percentage)
+    {
+        percentage = Mathf.Clamp01(percentage); // makes sure it's between 0 and 1
+        float damage = maxHealth * percentage;
+        playerHealth -= damage;
+        playerHealth = Mathf.Clamp(playerHealth, 0f, maxHealth);
+        Debug.Log($"Took damage: {damage}, Health now: {playerHealth}");
+        UpdateHealthUI();
+
+        if (playerHealth <= 0f)
+        {
+            Die();
+        }
+    }
+
+    void UpdateHealthUI()
+    {
+        if (healthBar != null)
+        {
+            healthBar.fillAmount = Mathf.Clamp01(playerHealth / maxHealth);
+        }
+    }
+
+    void Die()
+    {
+        Debug.Log("Player died at health: " + playerHealth);
+    }
+}
