@@ -1,6 +1,8 @@
 using UnityEngine; 
 using System.Collections;
 using UnityEngine.UI;
+using TMPro;
+
 
 [System.Serializable]
 public enum SIDE { Left, Mid, Right }
@@ -48,6 +50,7 @@ public class PlayerControl : MonoBehaviour
     private float playerHealth = 100f;
     private float maxHealth = 100f;
     public Image healthBar;
+    public TextMeshProUGUI healthText;
 
     //ColliderCheck
     private float hitCooldown = 0f;
@@ -338,6 +341,8 @@ public class PlayerControl : MonoBehaviour
         if (healthBar != null)
         {
             healthBar.fillAmount = Mathf.Clamp01(playerHealth / maxHealth);
+            float percent = (playerHealth / maxHealth) * 100f;
+            healthText.text = Mathf.RoundToInt(percent) + "%";
         }
     }
 
