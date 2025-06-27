@@ -51,6 +51,8 @@ public class PlayerControl : MonoBehaviour
     private float maxHealth = 100f;
     public Image healthBar;
     public TextMeshProUGUI healthText;
+    public PowerupUI powerupUI;
+    public GameObject gameOverPanel;
 
     //ColliderCheck
     private float hitCooldown = 0f;
@@ -127,15 +129,19 @@ public class PlayerControl : MonoBehaviour
             {
                 jetpackEquip = false;
                 jetpack.SetActive(false);
+                if (powerupUI != null)
+                    powerupUI.RemoveJetpack(); // ✅ remove 1 from UI
             }
         }
 
-        if (explosionPowerupEquip)
+       if (explosionPowerupEquip)
         {
             explosionPowerupTimer -= Time.deltaTime;
             if (explosionPowerupTimer <= 0f)
             {
                 explosionPowerupEquip = false;
+                if (powerupUI != null)
+                    powerupUI.RemoveExplosion(); // ✅ remove 1 from UI
             }
             if (Input.GetMouseButtonDown(0))
             {
@@ -149,6 +155,8 @@ public class PlayerControl : MonoBehaviour
             if (wallExplosionPowerupTimer <= 0f)
             {
                 wallExplosionPowerupEquip = false;
+                if (powerupUI != null)
+                    powerupUI.RemoveWallExplosion(); // ✅ remove 1 from UI
             }
             if (Input.GetKeyDown(KeyCode.F))
             {
@@ -289,12 +297,23 @@ public class PlayerControl : MonoBehaviour
                 {
                     rb.isKinematic = false;
                     rb.AddExplosionForce(explosionForce, transform.position, explosionRadius, upwardsModifier, ForceMode.Impulse);
-                    StartCoroutine(ReEnableKinematic(rb, 0.5f));
+
+                    // Start coroutine to destroy after short delay
+                    StartCoroutine(DestroyAfterDelay(hitCollider.gameObject, 1f));
                 }
             }
         }
 
         Debug.Log("Wall explosion powerup used!");
+    }
+
+    IEnumerator DestroyAfterDelay(GameObject obj, float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        if (obj != null)
+        {
+            Destroy(obj);
+        }
     }
 
     private void OnTriggerEnter(Collider other)
@@ -305,12 +324,18 @@ public class PlayerControl : MonoBehaviour
             jetpack.SetActive(true);
             jetpackTimer = jetpackDuration;
             Destroy(other.gameObject);
+
+            if (powerupUI != null)
+            powerupUI.AddJetpack(); 
         }
         else if (other.CompareTag("ExplosionPowerup"))
         {
             explosionPowerupEquip = true;
             explosionPowerupTimer = explosionPowerupDuration;
             Destroy(other.gameObject);
+
+            if (powerupUI != null)
+            powerupUI.AddExplosion();  
         }
         else if (other.CompareTag("WallExplosionPowerup"))
         {
@@ -318,12 +343,15 @@ public class PlayerControl : MonoBehaviour
             wallExplosionPowerupTimer = wallExplosionPowerupDuration;
             Destroy(other.gameObject);
             Debug.Log("Wall explosion powerup picked up!");
+
+            if (powerupUI != null)
+            powerupUI.AddWallExplosion();  
         }
     }
 
     public void ReduceHealthByPercentage(float percentage)
     {
-        percentage = Mathf.Clamp01(percentage); // makes sure it's between 0 and 1
+        percentage = Mathf.Clamp01(percentage); 
         float damage = maxHealth * percentage;
         playerHealth -= damage;
         playerHealth = Mathf.Clamp(playerHealth, 0f, maxHealth);
@@ -349,5 +377,11 @@ public class PlayerControl : MonoBehaviour
     void Die()
     {
         Debug.Log("Player died at health: " + playerHealth);
+
+        if (gameOverPanel != null)
+            gameOverPanel.SetActive(true);
+
+        // Optionally stop player movement
+        Time.timeScale = 0f; // Pauses the game
     }
 }
