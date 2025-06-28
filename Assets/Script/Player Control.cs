@@ -1,8 +1,7 @@
-using UnityEngine; 
+using UnityEngine;
 using System.Collections;
 using UnityEngine.UI;
 using TMPro;
-
 
 [System.Serializable]
 public enum SIDE { Left, Mid, Right }
@@ -25,6 +24,13 @@ public class PlayerControl : MonoBehaviour
     private float ColHeight;
     private float ColCenterY;
 
+    // Audio
+    public AudioClip jumpSfx;
+    public AudioClip crouchSfx;
+    public AudioClip moveLeftSfx;
+    public AudioClip moveRightSfx;
+    private AudioSource audioSource;
+
     // Jetpack variables
     private bool jetpackEquip = false;
     public float mThrust = 30f;
@@ -32,12 +38,12 @@ public class PlayerControl : MonoBehaviour
     public float jetpackDuration = 5f;
     private float jetpackTimer = 0f;
 
-    // Explosion powerup (manual trigger)
+    // Explosion powerup
     private bool explosionPowerupEquip = false;
     public float explosionPowerupDuration = 5f;
     private float explosionPowerupTimer = 0f;
 
-    // Wall-hit explosion powerup (manual trigger)
+    // Wall explosion powerup
     private bool wallExplosionPowerupEquip = false;
     public float wallExplosionPowerupDuration = 5f;
     private float wallExplosionPowerupTimer = 0f;
@@ -54,7 +60,7 @@ public class PlayerControl : MonoBehaviour
     public PowerupUI powerupUI;
     public GameObject gameOverPanel;
 
-    //ColliderCheck
+    // Collider hit cooldown
     private float hitCooldown = 0f;
 
     void Start()
@@ -73,6 +79,13 @@ public class PlayerControl : MonoBehaviour
         playerCollider = GetComponent<Collider>();
         if (playerCollider == null)
             Debug.LogWarning("Player Collider not found!");
+
+        // Audio
+        audioSource = GetComponent<AudioSource>();
+        if (audioSource == null)
+        {
+            audioSource = gameObject.AddComponent<AudioSource>();
+        }
 
         UpdateHealthUI();
     }
@@ -98,6 +111,7 @@ public class PlayerControl : MonoBehaviour
                 m_SIDE = SIDE.Mid;
                 m_Animator.Play("Left");
             }
+            if (moveLeftSfx != null) audioSource.PlayOneShot(moveLeftSfx, 0.9f);
         }
         else if (SwipeRight)
         {
@@ -113,6 +127,7 @@ public class PlayerControl : MonoBehaviour
                 m_SIDE = SIDE.Mid;
                 m_Animator.Play("Right");
             }
+            if (moveRightSfx != null) audioSource.PlayOneShot(moveRightSfx, 0.9f);
         }
 
         if (jetpackEquip && Input.GetButton("Fire1"))
@@ -130,18 +145,18 @@ public class PlayerControl : MonoBehaviour
                 jetpackEquip = false;
                 jetpack.SetActive(false);
                 if (powerupUI != null)
-                    powerupUI.RemoveJetpack(); // ✅ remove 1 from UI
+                    powerupUI.RemoveJetpack();
             }
         }
 
-       if (explosionPowerupEquip)
+        if (explosionPowerupEquip)
         {
             explosionPowerupTimer -= Time.deltaTime;
             if (explosionPowerupTimer <= 0f)
             {
                 explosionPowerupEquip = false;
                 if (powerupUI != null)
-                    powerupUI.RemoveExplosion(); // ✅ remove 1 from UI
+                    powerupUI.RemoveExplosion();
             }
             if (Input.GetMouseButtonDown(0))
             {
@@ -156,7 +171,7 @@ public class PlayerControl : MonoBehaviour
             {
                 wallExplosionPowerupEquip = false;
                 if (powerupUI != null)
-                    powerupUI.RemoveWallExplosion(); // ✅ remove 1 from UI
+                    powerupUI.RemoveWallExplosion();
             }
             if (Input.GetKeyDown(KeyCode.F))
             {
@@ -193,6 +208,7 @@ public class PlayerControl : MonoBehaviour
                 y = JumpPower;
                 m_Animator.CrossFadeInFixedTime("Jump", 0.1f);
                 inJump = true;
+                if (jumpSfx != null) audioSource.PlayOneShot(jumpSfx, 0.9f);
             }
             else
             {
@@ -230,6 +246,7 @@ public class PlayerControl : MonoBehaviour
             m_Animator.CrossFadeInFixedTime("Crouch", 0.1f);
             inCrouch = true;
             inJump = false;
+            if (crouchSfx != null) audioSource.PlayOneShot(crouchSfx, 0.9f);
         }
     }
 
@@ -276,8 +293,8 @@ public class PlayerControl : MonoBehaviour
 
         if (hit.gameObject.CompareTag("ObstacleTrigger"))
         {
-            ReduceHealthByPercentage(0.3f); // 30% damage
-            hitCooldown = 0.5f; // Half-second cooldown
+            ReduceHealthByPercentage(0.3f);
+            hitCooldown = 0.5f;
         }
     }
 
@@ -297,8 +314,6 @@ public class PlayerControl : MonoBehaviour
                 {
                     rb.isKinematic = false;
                     rb.AddExplosionForce(explosionForce, transform.position, explosionRadius, upwardsModifier, ForceMode.Impulse);
-
-                    // Start coroutine to destroy after short delay
                     StartCoroutine(DestroyAfterDelay(hitCollider.gameObject, 1f));
                 }
             }
@@ -326,7 +341,7 @@ public class PlayerControl : MonoBehaviour
             Destroy(other.gameObject);
 
             if (powerupUI != null)
-            powerupUI.AddJetpack(); 
+                powerupUI.AddJetpack();
         }
         else if (other.CompareTag("ExplosionPowerup"))
         {
@@ -335,7 +350,7 @@ public class PlayerControl : MonoBehaviour
             Destroy(other.gameObject);
 
             if (powerupUI != null)
-            powerupUI.AddExplosion();  
+                powerupUI.AddExplosion();
         }
         else if (other.CompareTag("WallExplosionPowerup"))
         {
@@ -345,13 +360,13 @@ public class PlayerControl : MonoBehaviour
             Debug.Log("Wall explosion powerup picked up!");
 
             if (powerupUI != null)
-            powerupUI.AddWallExplosion();  
+                powerupUI.AddWallExplosion();
         }
     }
 
     public void ReduceHealthByPercentage(float percentage)
     {
-        percentage = Mathf.Clamp01(percentage); 
+        percentage = Mathf.Clamp01(percentage);
         float damage = maxHealth * percentage;
         playerHealth -= damage;
         playerHealth = Mathf.Clamp(playerHealth, 0f, maxHealth);
@@ -381,7 +396,6 @@ public class PlayerControl : MonoBehaviour
         if (gameOverPanel != null)
             gameOverPanel.SetActive(true);
 
-        // Optionally stop player movement
-        Time.timeScale = 0f; // Pauses the game
+        Time.timeScale = 0f;
     }
 }
