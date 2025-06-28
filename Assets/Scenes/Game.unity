@@ -30008,11 +30008,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 19aabc375fb380a4899e45bc4d4bfc4f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  runLoopSource: {fileID: 0}
+  runLoopSource: {fileID: 873572683}
   sfxSource: {fileID: 0}
-  jumpClip: {fileID: 0}
+  jumpClip: {fileID: 8300000, guid: 2eb3605c29b61fe429355ec479ae85f2, type: 3}
   slideClip: {fileID: 0}
-  crouchClip: {fileID: 0}
+  crouchClip: {fileID: 8300000, guid: 47a7d29ff80c50643b0e0029fbff903d, type: 3}
 --- !u!1 &685368587
 GameObject:
   m_ObjectHideFlags: 0
@@ -36013,8 +36013,8 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 0}
-  m_Resource: {fileID: 0}
+  m_audioClip: {fileID: 8300000, guid: 6a6b17d863afe7047a21565ac9cf127f, type: 3}
+  m_Resource: {fileID: 8300000, guid: 6a6b17d863afe7047a21565ac9cf127f, type: 3}
   m_PlayOnAwake: 1
   m_Volume: 1
   m_Pitch: 1
@@ -42846,11 +42846,11 @@ MonoBehaviour:
   musicSource: {fileID: 180184041}
   SFXSource: {fileID: 873572683}
   background: {fileID: 8300000, guid: 8e02ded8724724a43abcb790a7ced8ea, type: 3}
-  death: {fileID: 0}
+  death: {fileID: 8300000, guid: 6d2ae9929fbadbf4e8e085d47ab5be12, type: 3}
   wallTouch: {fileID: 0}
   Jump: {fileID: 0}
-  Crouch: {fileID: 0}
-  Run: {fileID: 0}
+  Crouch: {fileID: 8300000, guid: 47a7d29ff80c50643b0e0029fbff903d, type: 3}
+  Run: {fileID: 8300000, guid: 6a6b17d863afe7047a21565ac9cf127f, type: 3}
   volume: 0.15
 --- !u!4 &1036859336
 Transform:
